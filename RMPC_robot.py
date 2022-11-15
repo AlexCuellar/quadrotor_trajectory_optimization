@@ -110,9 +110,9 @@ class RMPC:
     def add_object(self, obj_center, obj_size, delta, id):
         '''Add Linear Chance Constraints (LCCs) necessary to define an obstacle to avoid'''
         self._Obj_Vars.append(self._problem.addMVar((self.timesteps + 1, 6), vtype=GRB.BINARY))
-        h_x = array([0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0])
-        h_y = array([0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0])
-        h_z = array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        h_x = array([0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
+        h_y = array([0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0])
+        h_z = array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         inflate = [.2, .1, .1]
         x_lb = obj_center[0] - obj_size[0]/2 - inflate[0]
         x_ub = obj_center[0] + obj_size[0]/2 + inflate[0]

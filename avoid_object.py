@@ -2,7 +2,7 @@ from RMPC_robot import RMPC, LCC
 from visualize_environment import visualize_3d
 from robot_model import *
 
-robot_plan = RMPC(T, 12, x_lims, 4, u_lims, A, B, x0_bar, Sigma_x0, Sigma_w, Delta, xf_bar)
+robot_plan = RMPC(T, 13, x_lims, 4, u_lims, A, B, x0_bar, Sigma_x0, Sigma_w, Delta, xf_bar)
 
 # # Define Obstacle
 objects = []
