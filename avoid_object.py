@@ -2,7 +2,9 @@ from RMPC_robot import RMPC, LCC
 from visualize_environment import visualize_3d
 from robot_model import *
 
-robot_plan = RMPC(T, 13, x_lims, 4, u_lims, A, B, x0_bar, Sigma_x0, Sigma_w, Delta, xf_bar)
+xdim = A.shape[1]
+udim = B.shape[1]
+robot_plan = RMPC(T, xdim, x_lims, udim, u_lims, A, B, x0_bar, Sigma_x0, Sigma_w, Delta, xf_bar)
 
 # # Define Obstacle
 objects = []
@@ -34,6 +36,8 @@ for i in range(T+1):
 print()
 for i in range(T+1):
     print("M[",i,"]: ", [x for x in robot_plan.M(i)])
+for i in range(T):
+    print("|x|[",i,"]: ", robot_plan.dx_abs(i))
 print("Optimized objective: J = {}".format(robot_plan.objective()))
 
 xbar = [robot_plan.xbar(i) for i in range(T)]
