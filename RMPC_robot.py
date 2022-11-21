@@ -1,6 +1,7 @@
 from time import time
 from gurobipy import Model, Var, MVar, GRB
 from numpy import dot, empty, sqrt, array
+from numpy.linalg import norm
 from scipy.special import erfinv
 
 class LCC:
@@ -74,9 +75,10 @@ class RMPC:
         self.lcc = []
 
         # Arrays/matrices to hold variables and covariances
-        self._xbar =  self._problem.addMVar((self.timesteps + 1, self.xdim), vtype=GRB.CONTINUOUS)
-        self._u =     self._problem.addMVar((self.timesteps    , self.udim), vtype=GRB.CONTINUOUS)
-        self.abs_u =  self._problem.addMVar((self.timesteps    , self.udim), vtype=GRB.CONTINUOUS)
+        self._xbar =   self._problem.addMVar((self.timesteps + 1, self.xdim), vtype=GRB.CONTINUOUS)
+        self._u =      self._problem.addMVar((self.timesteps    , self.udim), vtype=GRB.CONTINUOUS)
+        self._dx_abs = self._problem.addMVar((self.timesteps    , self.xdim), vtype=GRB.CONTINUOUS)
+        self.abs_u =   self._problem.addMVar((self.timesteps    , self.udim), vtype=GRB.CONTINUOUS)
         self._Sigma_x = empty((timesteps + 1), dtype=object)
         self._Obj_Vars = [] # self._problem.addMVar((self.timesteps + 1, 6), vtype=GRB.BINARY)
 
@@ -156,6 +158,8 @@ class RMPC:
         for k in range(ru):
             # for i in range(cx):
             self._problem.addConstr(self._xbar[k+1, :] == self.A @ self._xbar[k, :] + self.B @ self._u[k, :])
+            self._problem.addConstr(self._dx_abs[k, :] >= self._xbar[k+1, :] - self._xbar[k, :])
+            self._problem.addConstr(self._dx_abs[k, :] >= self._xbar[k, :] - self._xbar[k+1, :])
 
         # Initial state
         self._problem.addConstr(self._xbar[0, :] == self.x0_bar)
@@ -181,7 +185,9 @@ class RMPC:
 
     def _encode_objective_function(self):
         """Encode the objective: minimizing the sum of the absolute values of all control variables."""
-        self._problem.setObjective(self.abs_u.sum())
+        # self._problem.setObjective(self.abs_u.sum())
+        self._problem.setObjective(self._dx_abs.sum())
+        # self._problem.setObjective(sum([sum([self._dx_abs[k, i]**2 for i in range(self.xdim)]) for k in range(self.timesteps)]))
 
     def _encode_M_constraint(self):
         for obj_id in range(len(self._Obj_Vars)):
@@ -247,6 +253,17 @@ class RMPC:
         if self.status == -1:
             raise Exception('Please call determinize_and_solve() successfully before calling u()!')
         return array([ui.X for ui in self._u[k, :]])
+
+    def dx_abs(self, k):
+        """
+        Returns the solved value for u (the control value) at timestep k.
+            Input:
+                k - an integer from 0 to timesteps - 1
+        Throws an error if the system hasn't been solved successfully yet.
+        """
+        if self.status == -1:
+            raise Exception('Please call determinize_and_solve() successfully before calling u()!')
+        return array([ui.X for ui in self._dx_abs[k, :]])
 
     def M(self, k):
         """
