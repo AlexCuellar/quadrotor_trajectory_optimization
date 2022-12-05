@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import matplotlib
 import numpy as np
-from pulp import value
+# from pulp import value
 from scipy.special import erfinv
 
 from mpl_toolkits.mplot3d import Axes3D
@@ -29,8 +29,8 @@ def visualize_3d(pts, objects):
     all_verts = []
     for object in objects:
       all_verts += process_object(object[0], object[1])
-
-    ax.scatter([i[0] for i in pts], [i[1] for i in pts], [i[2] for i in pts], color="r")
+    # print(all_verts)
     ax.add_collection3d(Poly3DCollection(all_verts))
+    ax.scatter([i[0] for i in pts], [i[1] for i in pts], [i[2] for i in pts], color="r")
     #display plot
     plt.show()

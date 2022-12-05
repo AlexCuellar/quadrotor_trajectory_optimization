@@ -1,5 +1,5 @@
 from time import time
-from gurobipy import Model, Var, MVar, GRB
+from gurobipy import Model, Var, MVar, GRB, Env
 from numpy import dot, empty, sqrt, array
 from numpy.linalg import norm
 from scipy.special import erfinv
@@ -70,7 +70,7 @@ class RMPC:
 
         # Create a linear program to be solved
         self._problem = Model("Optimizer")
-
+        self._problem.Params.LogToConsole = 0
         # A list of linear chance constraints (lcc's)
         self.lcc = []
 
@@ -94,7 +94,7 @@ class RMPC:
 
         # Store RMPC problem parameters
         self.A = A
-        self.B = B
+        self.B = B                                                                                      
         self.x0_bar = x0_bar
         self.Sigma_x0 = Sigma_x0
         self.Sigma_w = Sigma_w
@@ -185,9 +185,12 @@ class RMPC:
 
     def _encode_objective_function(self):
         """Encode the objective: minimizing the sum of the absolute values of all control variables."""
+        # CONTROL EFFORT
         # self._problem.setObjective(self.abs_u.sum())
-        self._problem.setObjective(self._dx_abs.sum())
-        # self._problem.setObjective(sum([sum([self._dx_abs[k, i]**2 for i in range(self.xdim)]) for k in range(self.timesteps)]))
+        # L1 NORM DISTNANCE
+        # self._problem.setObjective(self._dx_abs.sum())
+        # L2 NORM DISTANCE
+        self._problem.setObjective(sum([sum([self._dx_abs[k, i]**2 for i in range(self.xdim)]) for k in range(self.timesteps)]))
 
     def _encode_M_constraint(self):
         for obj_id in range(len(self._Obj_Vars)):

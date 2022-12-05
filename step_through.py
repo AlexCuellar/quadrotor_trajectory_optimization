@@ -1,12 +1,12 @@
 from robot_model import *
 
-def next_step(x, u):
+def next_step(x, u, A, B):
     return A.dot(x) + B.dot(u)
 
-def run_steps(x0, u_all):
+def run_steps(x0, u_all, A, B):
     x_vals = [x0]
     for u in u_all:
-        x_vals.append(next_step(x_vals[-1], u)) 
+        x_vals.append(next_step(x_vals[-1], u, A, B)) 
     return x_vals
 
 u_all = []
