@@ -1,6 +1,6 @@
 from time import time
 from gurobipy import Model, Var, MVar, GRB
-from numpy import dot, empty, sqrt, array
+from numpy import dot, empty, sqrt, array, cross
 from numpy.linalg import norm
 from scipy.special import erfinv
 
@@ -109,26 +109,84 @@ class RMPC:
         """Create and store a linear chance constraint."""
         self.lcc.append(LCC(k, h, g, delta, id))
 
-    def add_object(self, obj_center, obj_size, delta, id):
+    def add_object(self, obj_points, obj_type, delta, id):
         '''Add Linear Chance Constraints (LCCs) necessary to define an obstacle to avoid'''
-        self._Obj_Vars.append(self._problem.addMVar((self.timesteps + 1, 6), vtype=GRB.BINARY))
-        h_x = array([0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
-        h_y = array([0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0])
-        h_z = array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-        inflate = [.2, .1, .1]
-        x_lb = obj_center[0] - obj_size[0]/2 - inflate[0]
-        x_ub = obj_center[0] + obj_size[0]/2 + inflate[0]
-        y_lb = obj_center[1] - obj_size[1]/2 - inflate[1]
-        y_ub = obj_center[1] + obj_size[1]/2 + inflate[1]
-        z_lb = obj_center[2] - obj_size[2]/2 - inflate[2]
-        z_ub = obj_center[2] + obj_size[2]/2 + inflate[2]
-        for k in range(self.timesteps + 1):
-            self.lcc.append(LCC(k,  h_x,  x_lb, delta, id, True, k, 0))
-            self.lcc.append(LCC(k, -h_x, -x_ub, delta, id, True, k, 1))
-            self.lcc.append(LCC(k,  h_y,  y_lb, delta, id, True, k, 2))
-            self.lcc.append(LCC(k, -h_y, -y_ub, delta, id, True, k, 3))
-            self.lcc.append(LCC(k,  h_z,  z_lb, delta, id, True, k, 4))
-            self.lcc.append(LCC(k, -h_z, -z_ub, delta, id, True, k, 5))
+        if obj_type == 'tetrahedron':
+            self._Obj_Vars.append(self._problem.addMVar((self.timesteps + 1, 4), vtype=GRB.BINARY))
+            h = []
+            g = []
+            inflate = 0.2
+
+            for i in range(len(obj_points)):
+                plane_points = [obj_points[j] for j in range(len(obj_points)) if j != i]
+                v1 = plane_points[0] - plane_points[1]
+                v2 = plane_points[0] - plane_points[2]
+                norm = cross(v1, v2)
+
+                g_i = dot(norm, plane_points[0])
+                if dot(norm, obj_points[i]) < g_i:
+                    h.append(-array([norm[2], 0, 0, 0, norm[0], 0, 0, 0, norm[1], 0, 0, 0, 0]))
+                    g.append(-g_i - inflate)
+                else:
+                    h.append(array([norm[2], 0, 0, 0, norm[0], 0, 0, 0, norm[1], 0, 0, 0, 0]))
+                    g.append(g_i - inflate)
+            
+            for k in range(self.timesteps + 1):
+                for i in range(len(h)):
+                    self.lcc.append(LCC(k, h[i], g[i], delta, id, True, k, i))
+            
+            print(h)
+            print(g)
+
+        elif obj_type == 'parallelopiped':
+            self._Obj_Vars.append(self._problem.addMVar((self.timesteps + 1, 6), vtype=GRB.BINARY))
+            h = []
+            g = []
+            inflate = 0.2
+
+            for i in range(len(obj_points) - 1):
+                plane_points = [obj_points[j] for j in range(len(obj_points)) if j != i]
+                v1 = plane_points[0] - plane_points[1]
+                v2 = plane_points[0] - plane_points[2]
+                norm = cross(v1, v2)
+
+                g_i = dot(norm, plane_points[0])
+                g_opp = dot(norm, obj_points[i])
+                if g_opp < g_i:
+                    h.append(-array([norm[2], 0, 0, 0, norm[0], 0, 0, 0, norm[1], 0, 0, 0, 0]))
+                    g.append(-g_i - inflate)
+                    h.append(array([norm[2], 0, 0, 0, norm[0], 0, 0, 0, norm[1], 0, 0, 0, 0]))
+                    g.append(g_opp - inflate)
+                else:
+                    h.append(array([norm[2], 0, 0, 0, norm[0], 0, 0, 0, norm[1], 0, 0, 0, 0]))
+                    g.append(g_i - inflate)
+                    h.append(-array([norm[2], 0, 0, 0, norm[0], 0, 0, 0, norm[1], 0, 0, 0, 0]))
+                    g.append(-g_opp - inflate)
+            
+            for k in range(self.timesteps + 1):
+                for i in range(len(h)):
+                    self.lcc.append(LCC(k, h[i], g[i], delta, id, True, k, i))
+
+    # def add_object(self, obj_center, obj_size, delta, id):
+    #     '''Add Linear Chance Constraints (LCCs) necessary to define an obstacle to avoid'''
+    #     self._Obj_Vars.append(self._problem.addMVar((self.timesteps + 1, 6), vtype=GRB.BINARY))
+    #     h_x = array([0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
+    #     h_y = array([0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0])
+    #     h_z = array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    #     inflate = [.2, .1, .1]
+    #     x_lb = obj_center[0] - obj_size[0]/2 - inflate[0]
+    #     x_ub = obj_center[0] + obj_size[0]/2 + inflate[0]
+    #     y_lb = obj_center[1] - obj_size[1]/2 - inflate[1]
+    #     y_ub = obj_center[1] + obj_size[1]/2 + inflate[1]
+    #     z_lb = obj_center[2] - obj_size[2]/2 - inflate[2]
+    #     z_ub = obj_center[2] + obj_size[2]/2 + inflate[2]
+    #     for k in range(self.timesteps + 1):
+    #         self.lcc.append(LCC(k,  h_x,  x_lb, delta, id, True, k, 0))
+    #         self.lcc.append(LCC(k, -h_x, -x_ub, delta, id, True, k, 1))
+    #         self.lcc.append(LCC(k,  h_y,  y_lb, delta, id, True, k, 2))
+    #         self.lcc.append(LCC(k, -h_y, -y_ub, delta, id, True, k, 3))
+    #         self.lcc.append(LCC(k,  h_z,  z_lb, delta, id, True, k, 4))
+    #         self.lcc.append(LCC(k, -h_z, -z_ub, delta, id, True, k, 5))
 
     def _compute_variance(self):
         """
