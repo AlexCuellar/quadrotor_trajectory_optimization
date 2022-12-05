@@ -86,7 +86,7 @@ def get_dynamics(use_free = False, T_length = .1):
 
 # state x = [z, dz, psi, dpsi, x, dx, phi, dphi, y, dy, th, dth]
 x0_bar = array([1, 0, 0, 0, 2.5, 0, 0, 0, 2.5, 0, 0, 0, g]) # The mean of x at timestep 0
-xf_bar = array([4, 0, 0, 0, 5, 0, 0, 0, 2, 0, 0, 0, g])
+xf_bar = array([4, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, g])
 Sigma_x0 = .05*np.eye(13) # Covariance matrix of x at timestep 0
 # Sigma_x0[0, 0] = .05
 # Sigma_x0[1, 1] = .05
